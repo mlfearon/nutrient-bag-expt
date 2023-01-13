@@ -1,12 +1,9 @@
 ## Code to produce the path models included in "Nutrient enrichment, habitat structure, and disease in the plankton"
-# Penczykowski et al. submitted to ________.
+# Penczykowski et al. submitted to Oecologia
 
 
 # code written by: Michelle L Fearon
-# last updated: March 28, 2022
-
-# Set wd
-setwd("C:/Users/mlfea/OneDrive/Documents/Projects/Rachel Bag Experiment SEM/Data and Code")
+# last updated: Jan 12, 2023
 
 
 # load packages
@@ -20,13 +17,16 @@ library(lmerTest)
 library(dplyr)
 library(tidyr)
 library(car)
+library(here)
 
 
+# set the path to the script relative to the project root directory
+here::i_am("scripts/BagExpt_SEM_Clean_28Mar2022.R")
 
 # load data
-mydata <- read.csv("BagExpt_clean.csv", stringsAsFactors = F, header = T)
+mydata <- read.csv(here("data/BagExpt_clean.csv"), stringsAsFactors = F, header = T)
 str(mydata)
-
+#View(mydata)
 
 # scale and center key variables
 # mydata$LogInfDens_z <- as.numeric(scale(mydata$LogInfDens))
@@ -85,7 +85,7 @@ mydata22_43_nutrients_NOspores <- mydata22_43_nutrients %>%
   filter(Spores == "No") %>%
   mutate(OLRE = 1:88)
 
-
+View(mydata22_43_nutrients_spores)
 
 # overdispersion function by ben bolker
 overdisp_fun <- function(model) {
@@ -97,121 +97,6 @@ overdisp_fun <- function(model) {
   c(chisq=Pearson.chisq,ratio=prat,rdf=rdf,p=pval)
 }
 
-
-
-##################################################################################################
-## Set standard formatting for figures 
-##################################################################################################
-
-SporesNames<-c("No"="-Spores","Spores"="+Spores")
-NutColors<-c("red","blue") # nutrient treatment color code:  high = red, low = blue
-
-fav_theme<-theme_bw()+
-  theme(panel.border = element_rect(colour = "black"),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), 
-        axis.line = element_line(colour = "black"),
-        axis.text=element_text(size=10), 
-        axis.title=element_text(size=10),
-        legend.text=element_text(size=10),
-        legend.title=element_text(size=10),
-        plot.title=element_text(size=12),
-        axis.title.y=element_text(vjust=1.2),
-        axis.title.x=element_text(vjust=0.4))
-
-ggplot(mydata)+
-   geom_boxplot(aes(x=Mixing,y=InfCount,color=Nutrients))+
-   geom_point(aes(x=Mixing,y=InfCount,color=Nutrients),position=position_jitterdodge(),size=0.8,alpha=0.8)+
-   facet_wrap(~Spores,labeller = labeller(Spores = SporesNames))+
-   scale_color_manual(values=NutColors)+
-   ylab("Infected Count")+
-   fav_theme
- 
-
-# look at how total nitrogen varies among treatments
-ggplot(mydata2, aes(x = Nutrients, y = TN, color=Nutrients)) +
-  geom_boxplot() +
-  geom_point(position=position_jitterdodge(),size=0.8,alpha=0.8)+
-  facet_grid(Mixing~Spores,labeller = labeller(Spores = SporesNames))+
-  scale_color_manual(values=NutColors)+
-  ylab("Total Nitrogen (ug/L)")+
-  scale_y_log10()+
-  fav_theme
-
-# look at how total phosphorus varies among treatments
-ggplot(mydata2, aes(x = Nutrients, y = TP, color=Nutrients)) +
-  geom_boxplot() +
-  geom_point(position=position_jitterdodge(),size=0.8,alpha=0.8)+
-  facet_wrap(~Spores,labeller = labeller(Spores = SporesNames))+
-  scale_color_manual(values=NutColors)+
-  ylab("Total Phosphorus (ug/L)")+
-  scale_y_log10()+
-  fav_theme
-
-
-# look at how total nitrogen varies among treatments
-ggplot(mydata2, aes(x = TN, y = TotChl, color=Nutrients)) +
-  geom_point(size=0.8,alpha=0.8)+
-  geom_smooth(method = "lm")+
-  facet_grid(~Spores,labeller = labeller(Spores = SporesNames))+
-  scale_color_manual(values=NutColors)+
-  ylab("Total Chl (ug/L)")+
-  scale_y_log10()+
-  fav_theme
-
-
-# look at uninfected egg ratios among treatments
-ggplot(mydata2, aes(x = Mixing, y = UninfEggRatio, color=Nutrients)) +
-  geom_boxplot() +
-  geom_point(position=position_jitterdodge(),size=0.8,alpha=0.8)+
-  facet_wrap(~Spores,labeller = labeller(Spores = SporesNames))+
-  scale_color_manual(values=NutColors)+
-  ylab("Uninfected Egg Ratio")+
-  fav_theme
-
-# look at how uninfected egg ratios varies based on chl
-ggplot(mydata2, aes(x = EdChl, y = UninfEggRatio, color=Nutrients)) +
-  geom_point(size=0.8,alpha=0.8)+
-  geom_smooth(method = "lm")+
-  facet_grid(Mixing~Spores,labeller = labeller(Spores = SporesNames))+
-  scale_color_manual(values=NutColors)+
-  ylab("Uninfected Egg Ratio")+
-  xlab("Total Chl (ug/L)")+
-  scale_x_log10()+
-  fav_theme
-
-# look at how uninfected egg ratios varies based on density
-ggplot(mydata2, aes(x = TotalDensity, y = UninfEggRatio, color=Nutrients)) +
-  geom_point(size=0.8,alpha=0.8)+
-  geom_smooth(method = "lm")+
-  facet_grid(~Spores,labeller = labeller(Spores = SporesNames))+
-  scale_color_manual(values=NutColors)+
-  ylab("Uninfected Egg Ratio")+
-  xlab("Total Host Density")+
-  scale_x_log10()+
-  fav_theme
-
-# look at how uninfected egg ratios varies based on Total Phosphorus
-ggplot(mydata2, aes(x = TP, y = UninfEggRatio, color=Nutrients)) +
-  geom_point(size=0.8,alpha=0.8)+
-  geom_smooth(method = "lm")+
-  facet_grid(~Spores,labeller = labeller(Spores = SporesNames))+
-  scale_color_manual(values=NutColors)+
-  ylab("Uninfected Egg Ratio")+
-  xlab("Total Phosphorus (ug/L)")+
-  scale_x_log10()+
-  fav_theme
-
-# look at how uninfected egg ratios varies based on Total Nitrogen
-ggplot(mydata2, aes(x = TN, y = UninfEggRatio, color=Nutrients)) +
-  geom_point(size=0.8,alpha=0.8)+
-  geom_smooth(method = "lm")+
-  facet_grid(~Spores,labeller = labeller(Spores = SporesNames))+
-  scale_color_manual(values=NutColors)+
-  ylab("Uninfected Egg Ratio")+
-  xlab("Total Nitrogen (ug/L)")+
-  scale_x_log10()+
-  fav_theme
 
 
 
@@ -232,7 +117,7 @@ nutrient_avgs_full <- mydata22_43 %>%
 
 ###### +Spore model
 
-# update columns in data set with rescaled variables
+# update columns in data set with re-scaled variables
 mydata22_43_nutrients_spores$TotalDensity2 <- round(mydata22_43_nutrients_spores$TotalDensity/10000)
 mydata22_43_nutrients_spores$InfDensity2 <- round(mydata22_43_nutrients_spores$InfDensity/1000)
 mydata22_43_nutrients_spores$EdChl2 <- round(mydata22_43_nutrients_spores$EdChl)
@@ -245,11 +130,11 @@ head(mydata22_43_nutrients_spores)
 exp.sem.fit_spores <- psem(
   glmer(InfDensity2~TotalDensity2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
   glmer(TotalDensity2~EdChl2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE), control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
-  glmer(EdChl2~TN2+TP2+(1|Bag)+(1|NDay_fac)+(1|OLRE),family="poisson",data=mydata22_43_nutrients_spores),
+  glmer(EdChl2~TN2+TP2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),family="poisson",data=mydata22_43_nutrients_spores),
   TN2%~~%TP2,
   mydata22_43_nutrients_spores
 )
-summary(exp.sem.fit_spores) # seems like there is a collinearity issue with including both TN and TP, causing effects in oposite directions but highly correlated.
+summary(exp.sem.fit_spores) # seems like there is a collinearity issue with including both TN and TP, causing effects in opposite directions but highly correlated.
 
 
 cor(mydata22_43_nutrients_spores$TN, mydata22_43_nutrients_spores$TP) # Yes, Pearson's correlation is 0.809
@@ -261,7 +146,7 @@ cor(mydata22_43_nutrients_spores$TN, mydata22_43_nutrients_spores$TP) # Yes, Pea
 ### BEST + SPORE and TP only model
 # Need to add add a correlated error between TP and total density to fix the collinearity problem!! 
 exp.sem.fit_spores_TP <- psem(
-  glmer(InfDensity2~TotalDensity2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
+  glmer(InfDensity2~TotalDensity2+MixingTrt+EdChl2+(1|Bag)+(1|NDay_fac)+(1|OLRE),control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
   glmer(TotalDensity2~EdChl2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE), control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
   glmer(EdChl2~TP2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),family="poisson",data=mydata22_43_nutrients_spores),
   TotalDensity2 %~~% TP2,
@@ -275,14 +160,14 @@ std_scale_coefs_sporesTP <- stdCoefs(exp.sem.fit_spores_TP, data=mydata22_43_nut
                                          standardize="scale",
                                          standardize.type = "latent.linear",
                                          intercepts = F)
-write.csv(std_scale_coefs_sporesTP, "sem_std_scale_coefs_SporesTP_model.csv", row.names=FALSE)
+write.csv(std_scale_coefs_sporesTP, here("tables/sem_std_scale_coefs_SporesTP_model.csv"), row.names=FALSE)
 
 
 
 
 ### BEST +SPORE and TN only model
 exp.sem.fit_spores_TN <- psem(
-  glmer(InfDensity2~TotalDensity2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
+  glmer(InfDensity2~TotalDensity2+MixingTrt+EdChl2+(1|Bag)+(1|NDay_fac)+(1|OLRE),control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
   glmer(TotalDensity2~EdChl2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE), control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
   glmer(EdChl2~TN2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),family="poisson",data=mydata22_43_nutrients_spores),
   mydata22_43_nutrients_spores
@@ -300,6 +185,82 @@ write.csv(std_scale_coefs_sporesTN, "sem_std_scale_coefs_SporesTN_model.csv", ro
 
 
 
+
+
+#Test of +Spores with TP model, removing Infection density (epidemic size) to compare power with the best model above
+exp.sem.fit_spores_TP_NoInf <- psem(
+  #glmer(InfDensity2~TotalDensity2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
+  glmer(TotalDensity2~EdChl2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE), control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
+  glmer(EdChl2~TP2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),family="poisson",data=mydata22_43_nutrients_spores),
+  TotalDensity2 %~~% TP2,
+  mydata22_43_nutrients_spores
+)
+summary(exp.sem.fit_spores_TP_NoInf)
+
+# huh, the model without infection density has a much lower AIC, I'm guessing because it is simpler and has fewer relationships...
+# but I think including epidemic is important to explain the dynamics happening
+AIC(exp.sem.fit_spores_TP, exp.sem.fit_spores_TP_NoInf) 
+
+
+
+#Test of +Spores with TN model, removing Infection density (epidemic size) to compare power with the best model above
+exp.sem.fit_spores_TN_NoInf <- psem(
+  #glmer(InfDensity2~TotalDensity2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
+  glmer(TotalDensity2~EdChl2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE), control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
+  glmer(EdChl2~TN2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),family="poisson",data=mydata22_43_nutrients_spores),
+  mydata22_43_nutrients_spores
+)
+summary(exp.sem.fit_spores_TN_NoInf) 
+
+AIC(exp.sem.fit_spores_TN, exp.sem.fit_spores_TN_NoInf)
+
+
+
+#Test of +Spores with TP model, replacing Infection density with infection prevalence to evaluate epidemic size and reduce collinearity between infection density and total host density
+exp.sem.fit_spores_TP_Prev <- psem(
+  glmer(PrevTotal~TotalDensity2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE), weights = TotalCount, control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="binomial", data=mydata22_43_nutrients_spores),
+  glmer(TotalDensity2~EdChl2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE), control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
+  glmer(EdChl2~TP2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),family="poisson",data=mydata22_43_nutrients_spores),
+  PrevTotal %~~% TP2,
+  TotalDensity2 %~~% TP2,
+  mydata22_43_nutrients_spores
+)
+summary(exp.sem.fit_spores_TP_Prev)
+
+# comparison of different model versions and tests of assumptions
+mod_test <- glmer(PrevTotal~TotalDensity2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE), weights = TotalCount, family="binomial", data=mydata22_43_nutrients_spores)
+mod_test <- glmer(cbind(InfCount,UninfCount)~TotalDensity2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE), family="binomial", data=mydata22_43_nutrients_spores)
+summary(mod_test)
+overdisp_fun(mod_test)
+plot(mod_test)
+qqnorm(resid(mod_test))
+qqline(resid(mod_test))
+
+library(ggeffects)
+predict_test <- ggpredict(mod_test, c("TotalDensity2 [all]"))
+plot(predict_test, add.data = T)
+
+AIC(exp.sem.fit_spores_TP, exp.sem.fit_spores_TP_Prev)
+
+
+#Test of +Spores with TN model, replacing Infection density with infection prevalence to evaluate epidemic size and reduce collinearity between infection density and total host density
+exp.sem.fit_spores_TN_Prev <- psem(
+  glmer(PrevTotal~TotalDensity2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),weights = TotalCount,control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="binomial",data=mydata22_43_nutrients_spores),
+  glmer(TotalDensity2~EdChl2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE), control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
+  glmer(EdChl2~TN2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),family="poisson",data=mydata22_43_nutrients_spores),
+  mydata22_43_nutrients_spores
+)
+summary(exp.sem.fit_spores_TN_Prev) 
+
+
+mod_test2 <- glmer(PrevTotal~TotalDensity2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),weights = TotalCount,family="binomial",data=mydata22_43_nutrients_spores)
+summary(mod_test2)
+overdisp_fun(mod_test2)
+plot(mod_test2)
+qqnorm(resid(mod_test2))
+qqline(resid(mod_test2))
+
+AIC(exp.sem.fit_spores_TN, exp.sem.fit_spores_TN_Prev)
 
 
 
@@ -356,6 +317,15 @@ std_scale_coefs_NOsporesTN <- stdCoefs(exp.sem.fit_NOspores_TN, data=mydata22_43
                                        intercepts = F)
 write.csv(std_scale_coefs_NOsporesTN, "sem_std_scale_coefs_NOSporesTN_model.csv", row.names=FALSE)
 
+
+# Testing the NO Spore TN model for goodness of fit by removing a non-sig pathway from the model so that it is not fully saturdated
+exp.sem.fit_NOspores_TN <- psem(
+  glmer(TotalDensity2~EdChl2+(1|Bag)+(1|NDay_fac)+(1|OLRE), control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_NOspores),
+  glmer(EdChl2~TN2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),family="poisson",data=mydata22_43_nutrients_NOspores),
+  TotalDensity2 %~~% TN2,
+  mydata22_43_nutrients_NOspores
+)
+summary(exp.sem.fit_NOspores_TN)
 
 
 
