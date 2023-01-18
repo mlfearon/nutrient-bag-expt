@@ -3,7 +3,7 @@
 
 
 # code written by: Michelle L Fearon
-# last updated: Jan 12, 2023
+# last updated: Jan 18, 2023
 
 
 # load packages
@@ -85,7 +85,7 @@ mydata22_43_nutrients_NOspores <- mydata22_43_nutrients %>%
   filter(Spores == "No") %>%
   mutate(OLRE = 1:88)
 
-View(mydata22_43_nutrients_spores)
+#View(mydata22_43_nutrients_spores)
 
 # overdispersion function by ben bolker
 overdisp_fun <- function(model) {
@@ -112,9 +112,6 @@ nutrient_avgs_full <- mydata22_43 %>%
 ### Simple SEM with data from day 22 to 43 (second epidemic)
 # Run separate SEMs for +Spore and -Spore data because the infection densities are all zero in the -Spore treatments
 
-
-
-
 ###### +Spore model
 
 # update columns in data set with re-scaled variables
@@ -128,16 +125,17 @@ head(mydata22_43_nutrients_spores)
 
 # Initial model for + spores
 exp.sem.fit_spores <- psem(
-  glmer(InfDensity2~TotalDensity2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
+  glmer(InfDensity2~TotalDensity2+MixingTrt+EdChl2+(1|Bag)+(1|NDay_fac)+(1|OLRE),control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
   glmer(TotalDensity2~EdChl2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE), control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
   glmer(EdChl2~TN2+TP2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),family="poisson",data=mydata22_43_nutrients_spores),
+  TotalDensity2 %~~% TP2,
   TN2%~~%TP2,
   mydata22_43_nutrients_spores
 )
 summary(exp.sem.fit_spores) # seems like there is a collinearity issue with including both TN and TP, causing effects in opposite directions but highly correlated.
 
 
-cor(mydata22_43_nutrients_spores$TN, mydata22_43_nutrients_spores$TP) # Yes, Pearson's correlation is 0.809
+cor.test(mydata22_43_nutrients_spores$TN, mydata22_43_nutrients_spores$TP) # Yes, Pearson's correlation is 0.809
 
 
 # Run separate SEMs testing TP and TN independently
@@ -181,7 +179,7 @@ std_scale_coefs_sporesTN <- stdCoefs(exp.sem.fit_spores_TN, data=mydata22_43_nut
                                      standardize="scale",
                                      standardize.type = "latent.linear",
                                      intercepts = F)
-write.csv(std_scale_coefs_sporesTN, "sem_std_scale_coefs_SporesTN_model.csv", row.names=FALSE)
+write.csv(std_scale_coefs_sporesTN, here("tables/sem_std_scale_coefs_SporesTN_model.csv"), row.names=FALSE)
 
 
 
@@ -290,11 +288,11 @@ summary(exp.sem.fit_NOspores_TP)
 
 # Table S2 in Appendix
 # coefficient table for -Spore path model with only TP (coefficients, st error, critical value, p-value and standard coefficients)
-std_scale_coefs_NOsporesTP <- stdCoefs(exp.sem.fit_NOspores_TP, data=mydata22_43_nutrients_spores, 
+std_scale_coefs_NOsporesTP <- stdCoefs(exp.sem.fit_NOspores_TP, data=mydata22_43_nutrients_NOspores, 
                                      standardize="scale",
                                      standardize.type = "latent.linear",
                                      intercepts = F)
-write.csv(std_scale_coefs_NOsporesTP, "sem_std_scale_coefs_NOSporesTP_model.csv", row.names=FALSE)
+write.csv(std_scale_coefs_NOsporesTP, here("tables/sem_std_scale_coefs_NOSporesTP_model.csv"), row.names=FALSE)
 
 
 ### BEST NO SPORE TN MODEL
@@ -311,11 +309,11 @@ summary(exp.sem.fit_NOspores_TN)
 
 # Table S4 in Appendix
 # coefficient table for -Spore path model with only TN (coefficients, st error, critical value, p-value and standard coefficients)
-std_scale_coefs_NOsporesTN <- stdCoefs(exp.sem.fit_NOspores_TN, data=mydata22_43_nutrients_spores, 
+std_scale_coefs_NOsporesTN <- stdCoefs(exp.sem.fit_NOspores_TN, data=mydata22_43_nutrients_NOspores, 
                                        standardize="scale",
                                        standardize.type = "latent.linear",
                                        intercepts = F)
-write.csv(std_scale_coefs_NOsporesTN, "sem_std_scale_coefs_NOSporesTN_model.csv", row.names=FALSE)
+write.csv(std_scale_coefs_NOsporesTN, here("tables/sem_std_scale_coefs_NOSporesTN_model.csv"), row.names=FALSE)
 
 
 # Testing the NO Spore TN model for goodness of fit by removing a non-sig pathway from the model so that it is not fully saturdated
