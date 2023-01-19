@@ -3,7 +3,7 @@
 
 
 # code written by: Michelle L Fearon
-# last updated: Jan 18, 2023
+# last updated: Jan 19, 2023
 
 
 # load packages
@@ -99,16 +99,6 @@ overdisp_fun <- function(model) {
 
 
 
-
-
-# generate average total phosphorus and nitrogen
-nutrient_avgs_full <- mydata22_43 %>%
-  group_by(Bag) %>%
-  summarize(TP_avg = mean(TP, na.rm = T), TP_sd = sd(TP, na.rm = T), TN_avg = mean(TN, na.rm = T), TN_sd = sd(TN, na.rm = T))
-
-
-
-
 ### Simple SEM with data from day 22 to 43 (second epidemic)
 # Run separate SEMs for +Spore and -Spore data because the infection densities are all zero in the -Spore treatments
 
@@ -187,7 +177,6 @@ write.csv(std_scale_coefs_sporesTN, here("tables/sem_std_scale_coefs_SporesTN_mo
 
 #Test of +Spores with TP model, removing Infection density (epidemic size) to compare power with the best model above
 exp.sem.fit_spores_TP_NoInf <- psem(
-  #glmer(InfDensity2~TotalDensity2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
   glmer(TotalDensity2~EdChl2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE), control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
   glmer(EdChl2~TP2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),family="poisson",data=mydata22_43_nutrients_spores),
   TotalDensity2 %~~% TP2,
@@ -196,14 +185,13 @@ exp.sem.fit_spores_TP_NoInf <- psem(
 summary(exp.sem.fit_spores_TP_NoInf)
 
 # huh, the model without infection density has a much lower AIC, I'm guessing because it is simpler and has fewer relationships...
-# but I think including epidemic is important to explain the dynamics happening
+# but I think including epidemic is important to explain the dynamics happening, because we know adding spores will change population dynamics and the model can't know that without us telling it
 AIC(exp.sem.fit_spores_TP, exp.sem.fit_spores_TP_NoInf) 
 
 
 
 #Test of +Spores with TN model, removing Infection density (epidemic size) to compare power with the best model above
 exp.sem.fit_spores_TN_NoInf <- psem(
-  #glmer(InfDensity2~TotalDensity2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
   glmer(TotalDensity2~EdChl2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE), control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
   glmer(EdChl2~TN2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),family="poisson",data=mydata22_43_nutrients_spores),
   mydata22_43_nutrients_spores
@@ -216,7 +204,7 @@ AIC(exp.sem.fit_spores_TN, exp.sem.fit_spores_TN_NoInf)
 
 #Test of +Spores with TP model, replacing Infection density with infection prevalence to evaluate epidemic size and reduce collinearity between infection density and total host density
 exp.sem.fit_spores_TP_Prev <- psem(
-  glmer(PrevTotal~TotalDensity2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE), weights = TotalCount, control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="binomial", data=mydata22_43_nutrients_spores),
+  glmer(PrevTotal~TotalDensity2+MixingTrt+EdChl2+(1|Bag)+(1|NDay_fac)+(1|OLRE), weights = TotalCount, control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="binomial", data=mydata22_43_nutrients_spores),
   glmer(TotalDensity2~EdChl2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE), control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
   glmer(EdChl2~TP2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),family="poisson",data=mydata22_43_nutrients_spores),
   PrevTotal %~~% TP2,
@@ -225,9 +213,11 @@ exp.sem.fit_spores_TP_Prev <- psem(
 )
 summary(exp.sem.fit_spores_TP_Prev)
 
+cor.test(mydata22_43_nutrients_spores$PrevTotal, mydata22_43_nutrients_spores$InfDensity)
+
 # comparison of different model versions and tests of assumptions
-mod_test <- glmer(PrevTotal~TotalDensity2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE), weights = TotalCount, family="binomial", data=mydata22_43_nutrients_spores)
-mod_test <- glmer(cbind(InfCount,UninfCount)~TotalDensity2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE), family="binomial", data=mydata22_43_nutrients_spores)
+mod_test <- glmer(PrevTotal~TotalDensity2+MixingTrt+EdChl2+(1|Bag)+(1|NDay_fac)+(1|OLRE), weights = TotalCount, family="binomial", data=mydata22_43_nutrients_spores)
+mod_test <- glmer(cbind(InfCount,UninfCount)~TotalDensity2+MixingTrt+EdChl2+(1|Bag)+(1|NDay_fac)+(1|OLRE), family="binomial", data=mydata22_43_nutrients_spores)
 summary(mod_test)
 overdisp_fun(mod_test)
 plot(mod_test)
@@ -243,7 +233,7 @@ AIC(exp.sem.fit_spores_TP, exp.sem.fit_spores_TP_Prev)
 
 #Test of +Spores with TN model, replacing Infection density with infection prevalence to evaluate epidemic size and reduce collinearity between infection density and total host density
 exp.sem.fit_spores_TN_Prev <- psem(
-  glmer(PrevTotal~TotalDensity2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),weights = TotalCount,control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="binomial",data=mydata22_43_nutrients_spores),
+  glmer(PrevTotal~TotalDensity2+MixingTrt+EdChl2+(1|Bag)+(1|NDay_fac)+(1|OLRE),weights = TotalCount,control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="binomial",data=mydata22_43_nutrients_spores),
   glmer(TotalDensity2~EdChl2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE), control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
   glmer(EdChl2~TN2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),family="poisson",data=mydata22_43_nutrients_spores),
   mydata22_43_nutrients_spores
@@ -251,7 +241,7 @@ exp.sem.fit_spores_TN_Prev <- psem(
 summary(exp.sem.fit_spores_TN_Prev) 
 
 
-mod_test2 <- glmer(PrevTotal~TotalDensity2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),weights = TotalCount,family="binomial",data=mydata22_43_nutrients_spores)
+mod_test2 <- glmer(PrevTotal~TotalDensity2+MixingTrt+EdChl2+(1|Bag)+(1|NDay_fac)+(1|OLRE),weights = TotalCount,family="binomial",data=mydata22_43_nutrients_spores)
 summary(mod_test2)
 overdisp_fun(mod_test2)
 plot(mod_test2)
@@ -317,13 +307,13 @@ write.csv(std_scale_coefs_NOsporesTN, here("tables/sem_std_scale_coefs_NOSporesT
 
 
 # Testing the NO Spore TN model for goodness of fit by removing a non-sig pathway from the model so that it is not fully saturdated
-exp.sem.fit_NOspores_TN <- psem(
+exp.sem.fit_NOspores_TN_test <- psem(
   glmer(TotalDensity2~EdChl2+(1|Bag)+(1|NDay_fac)+(1|OLRE), control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_NOspores),
   glmer(EdChl2~TN2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),family="poisson",data=mydata22_43_nutrients_NOspores),
   TotalDensity2 %~~% TN2,
   mydata22_43_nutrients_NOspores
 )
-summary(exp.sem.fit_NOspores_TN)
+summary(exp.sem.fit_NOspores_TN_test)
 
 
 
@@ -348,7 +338,7 @@ cor(mydata22_43_nutrients_NOspores$TN2, mydata22_43_nutrients_NOspores$TotalDens
 
 ### Infection density models
 
-infdens <- glmer(InfDensity2~TotalDensity2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores)
+infdens <- glmer(InfDensity2~TotalDensity2+MixingTrt+EdChl2+(1|Bag)+(1|NDay_fac)+(1|OLRE),control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores)
 summary(infdens)
 plot(infdens)
 qqnorm(resid(infdens)) 
