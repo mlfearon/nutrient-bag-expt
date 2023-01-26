@@ -143,7 +143,7 @@ exp.sem.fit_spores_TP <- psem(
 )
 summary(exp.sem.fit_spores_TP)
 
-# Table S1 in Appendix
+# Table S3 in Appendix
 # coefficient table for +Spore path model with only TP (coefficients, st error, critical value, p-value and standard coefficients)
 std_scale_coefs_sporesTP <- stdCoefs(exp.sem.fit_spores_TP, data=mydata22_43_nutrients_spores, 
                                          standardize="scale",
@@ -164,7 +164,7 @@ exp.sem.fit_spores_TN <- psem(
 summary(exp.sem.fit_spores_TN) #model converges and fits the data, does not have a link between TN and TotalDensity
 
 
-# Table S3 in Appendix
+# Table S5 in Appendix
 # coefficient table for +Spore path model with only TP (coefficients, st error, critical value, p-value and standard coefficients)
 std_scale_coefs_sporesTN <- stdCoefs(exp.sem.fit_spores_TN, data=mydata22_43_nutrients_spores, 
                                      standardize="scale",
@@ -435,10 +435,32 @@ qqline(resid(chl_NOsporesTN))
 overdisp_fun(chl_NOsporesTN)  ## added Observation level random effect because original model was over-dispersed. No longer over-dispersed with OLRE included.
 
 
+# APPENDIX S1 Table S6
+# correlation table among factors in the SEM for -Spore data
+NoSpore_subset <- mydata22_43_nutrients_NOspores %>%
+  select(TotalDensity2, EdChl2, TP2, TN2)
+
+NoSpore_correlations <- cor(NoSpore_subset)
+
+# add p-values for each correlation above the diagonal
+NoSpore_correlations["TotalDensity2", "EdChl2"] <- unlist(cor.test(NoSpore_subset$TotalDensity2, NoSpore_subset$EdChl2)[3])
+NoSpore_correlations["TotalDensity2", "TP2"] <- unlist(cor.test(NoSpore_subset$TotalDensity2, NoSpore_subset$TP2)[3])
+NoSpore_correlations["TotalDensity2", "TN2"] <- unlist(cor.test(NoSpore_subset$TotalDensity2, NoSpore_subset$TN2)[3])
+NoSpore_correlations["EdChl2", "TP2"] <- unlist(cor.test(NoSpore_subset$EdChl2, NoSpore_subset$TP2)[3])
+NoSpore_correlations["EdChl2", "TN2"] <- unlist(cor.test(NoSpore_subset$EdChl2, NoSpore_subset$TN2)[3])
+NoSpore_correlations["TP2", "TN2"] <- unlist(cor.test(NoSpore_subset$TP2, NoSpore_subset$TN2)[3])
+
+
+NoSpore_correlations <- format(round(NoSpore_correlations, 3))
+# set diagonal to NA
+diag(NoSpore_correlations) <- "--"
+rownames(NoSpore_correlations) <- c("Total Host Density", "Edible Chlorophyll", "Total Phosphorus", "Total Nitrogen")
+colnames(NoSpore_correlations) <- c("Total Host Density", "Edible Chlorophyll", "Total Phosphorus", "Total Nitrogen")
+write.csv(NoSpore_correlations, "NoSpore_SEM_factor_correlations.csv", quote = F, row.names = T)
 
 
 
-# APPENDIX S1 Table S5
+# APPENDIX S1 Table S7
 # correlation table among factors in the SEM for +Spore data
 Spore_subset <- mydata22_43_nutrients_spores %>%
   select(InfDensity2, TotalDensity2, EdChl2, TP2, TN2)
@@ -464,29 +486,3 @@ diag(Spore_correlations) <- "--"
 rownames(Spore_correlations) <- c("Infection Density", "Total Host Density", "Edible Chlorophyll", "Total Phosphorus", "Total Nitrogen")
 colnames(Spore_correlations) <- c("Infection Density", "Total Host Density", "Edible Chlorophyll", "Total Phosphorus", "Total Nitrogen")
 write.csv(Spore_correlations, "Spore_SEM_factor_correlations.csv", quote = F, row.names = T)
-
-
-
-# APPENDIX S1 Table S6
-# correlation table among factors in the SEM for -Spore data
-NoSpore_subset <- mydata22_43_nutrients_NOspores %>%
-  select(TotalDensity2, EdChl2, TP2, TN2)
-
-NoSpore_correlations <- cor(NoSpore_subset)
-
-# add p-values for each correlation above the diagonal
-NoSpore_correlations["TotalDensity2", "EdChl2"] <- unlist(cor.test(NoSpore_subset$TotalDensity2, NoSpore_subset$EdChl2)[3])
-NoSpore_correlations["TotalDensity2", "TP2"] <- unlist(cor.test(NoSpore_subset$TotalDensity2, NoSpore_subset$TP2)[3])
-NoSpore_correlations["TotalDensity2", "TN2"] <- unlist(cor.test(NoSpore_subset$TotalDensity2, NoSpore_subset$TN2)[3])
-NoSpore_correlations["EdChl2", "TP2"] <- unlist(cor.test(NoSpore_subset$EdChl2, NoSpore_subset$TP2)[3])
-NoSpore_correlations["EdChl2", "TN2"] <- unlist(cor.test(NoSpore_subset$EdChl2, NoSpore_subset$TN2)[3])
-NoSpore_correlations["TP2", "TN2"] <- unlist(cor.test(NoSpore_subset$TP2, NoSpore_subset$TN2)[3])
-
-
-NoSpore_correlations <- format(round(NoSpore_correlations, 3))
-# set diagonal to NA
-diag(NoSpore_correlations) <- "--"
-rownames(NoSpore_correlations) <- c("Total Host Density", "Edible Chlorophyll", "Total Phosphorus", "Total Nitrogen")
-colnames(NoSpore_correlations) <- c("Total Host Density", "Edible Chlorophyll", "Total Phosphorus", "Total Nitrogen")
-write.csv(NoSpore_correlations, "NoSpore_SEM_factor_correlations.csv", quote = F, row.names = T)
-
