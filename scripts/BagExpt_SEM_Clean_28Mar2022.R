@@ -1,9 +1,10 @@
-## Code to produce the path models included in "Nutrient enrichment, habitat structure, and disease in the plankton"
+## Code to produce the path models included in "Pathways to parasitism: effects of nutrient enrichment and
+# mixing on algae-zooplankton-parasite interactions"
 # Penczykowski et al. submitted to Oecologia
 
 
 # code written by: Michelle L Fearon
-# last updated: Jan 19, 2023
+# last updated: Jan 26, 2023
 
 
 # load packages
@@ -176,6 +177,7 @@ write.csv(std_scale_coefs_sporesTN, here("tables/sem_std_scale_coefs_SporesTN_mo
 
 
 #Test of +Spores with TP model, removing Infection density (epidemic size) to compare power with the best model above
+# We did this is to evaluate the impact that infection density is having on the model
 exp.sem.fit_spores_TP_NoInf <- psem(
   glmer(TotalDensity2~EdChl2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE), control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
   glmer(EdChl2~TP2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),family="poisson",data=mydata22_43_nutrients_spores),
@@ -191,6 +193,7 @@ AIC(exp.sem.fit_spores_TP, exp.sem.fit_spores_TP_NoInf)
 
 
 #Test of +Spores with TN model, removing Infection density (epidemic size) to compare power with the best model above
+# We did this is to evaluate the impact that infection density is having on the model
 exp.sem.fit_spores_TN_NoInf <- psem(
   glmer(TotalDensity2~EdChl2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE), control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
   glmer(EdChl2~TN2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),family="poisson",data=mydata22_43_nutrients_spores),
@@ -199,6 +202,8 @@ exp.sem.fit_spores_TN_NoInf <- psem(
 summary(exp.sem.fit_spores_TN_NoInf) 
 
 AIC(exp.sem.fit_spores_TN, exp.sem.fit_spores_TN_NoInf)
+
+
 
 
 
@@ -215,17 +220,39 @@ summary(exp.sem.fit_spores_TP_Prev)
 
 cor.test(mydata22_43_nutrients_spores$PrevTotal, mydata22_43_nutrients_spores$InfDensity)
 
+# Table S8 in Appendix
+# coefficient table for +Spore path model with only TP and infection prevalence (coefficients, st error, critical value, p-value and standard coefficients)
+std_scale_coefs_sporesTP_prev <- stdCoefs(exp.sem.fit_spores_TP_Prev, data=mydata22_43_nutrients_spores, 
+                                     standardize="scale",
+                                     standardize.type = "latent.linear",
+                                     intercepts = F)
+write.csv(std_scale_coefs_sporesTP_prev, here("tables/sem_std_scale_coefs_SporesTP_Prev_model.csv"), row.names=FALSE)
+
+
+# model above is fully saturated, removed one non-sig pathway (Mixing --> Edible Chl) to check for goodness of fit tests
+exp.sem.fit_spores_TP_Prev2 <- psem(
+  glmer(PrevTotal~TotalDensity2+MixingTrt+EdChl2+(1|Bag)+(1|NDay_fac)+(1|OLRE), weights = TotalCount, control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="binomial", data=mydata22_43_nutrients_spores),
+  glmer(TotalDensity2~EdChl2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE), control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_spores),
+  glmer(EdChl2~TP2+(1|Bag)+(1|NDay_fac)+(1|OLRE),family="poisson",data=mydata22_43_nutrients_spores),
+  PrevTotal %~~% TP2,
+  TotalDensity2 %~~% TP2,
+  mydata22_43_nutrients_spores
+)
+summary(exp.sem.fit_spores_TP_Prev2)  # looks good!
+
+
 # comparison of different model versions and tests of assumptions
 mod_test <- glmer(PrevTotal~TotalDensity2+MixingTrt+EdChl2+(1|Bag)+(1|NDay_fac)+(1|OLRE), weights = TotalCount, family="binomial", data=mydata22_43_nutrients_spores)
-mod_test <- glmer(cbind(InfCount,UninfCount)~TotalDensity2+MixingTrt+EdChl2+(1|Bag)+(1|NDay_fac)+(1|OLRE), family="binomial", data=mydata22_43_nutrients_spores)
+mod_test2 <- glmer(cbind(InfCount,UninfCount)~TotalDensity2+MixingTrt+EdChl2+(1|Bag)+(1|NDay_fac)+(1|OLRE), family="binomial", data=mydata22_43_nutrients_spores)
 summary(mod_test)
+summary(mod_test2)
 overdisp_fun(mod_test)
 plot(mod_test)
 qqnorm(resid(mod_test))
 qqline(resid(mod_test))
 
 library(ggeffects)
-predict_test <- ggpredict(mod_test, c("TotalDensity2 [all]"))
+predict_test <- ggpredict(mod_test, c("TotalDensity2 [all]"))  # there is no relationship between total density and infection prevalence
 plot(predict_test, add.data = T)
 
 AIC(exp.sem.fit_spores_TP, exp.sem.fit_spores_TP_Prev)
@@ -240,7 +267,16 @@ exp.sem.fit_spores_TN_Prev <- psem(
 )
 summary(exp.sem.fit_spores_TN_Prev) 
 
+# Table S9 in Appendix
+# coefficient table for +Spore path model with only TP and infection prevalence (coefficients, st error, critical value, p-value and standard coefficients)
+std_scale_coefs_sporesTN_prev <- stdCoefs(exp.sem.fit_spores_TN_Prev, data=mydata22_43_nutrients_spores, 
+                                          standardize="scale",
+                                          standardize.type = "latent.linear",
+                                          intercepts = F)
+write.csv(std_scale_coefs_sporesTN_prev, here("tables/sem_std_scale_coefs_SporesTN_Prev_model.csv"), row.names=FALSE)
 
+
+# tests of assumptions
 mod_test2 <- glmer(PrevTotal~TotalDensity2+MixingTrt+EdChl2+(1|Bag)+(1|NDay_fac)+(1|OLRE),weights = TotalCount,family="binomial",data=mydata22_43_nutrients_spores)
 summary(mod_test2)
 overdisp_fun(mod_test2)
