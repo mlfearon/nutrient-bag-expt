@@ -4,7 +4,7 @@
 
 
 # code written by: Michelle L Fearon
-# last updated: Jan 26, 2023
+# last updated: Feb 8, 2023
 
 
 # load packages
@@ -22,43 +22,31 @@ library(here)
 
 
 # set the path to the script relative to the project root directory
-here::i_am("scripts/BagExpt_SEM_Clean_28Mar2022.R")
+here::i_am("scripts/BagExpt_SEM_Clean.R")
 
 # load data
 mydata <- read.csv(here("data/BagExpt_clean.csv"), stringsAsFactors = F, header = T)
 str(mydata)
 #View(mydata)
 
-# scale and center key variables
-# mydata$LogInfDens_z <- as.numeric(scale(mydata$LogInfDens))
-# mydata$LogTotDens_z <- as.numeric(scale(mydata$LogTotDens))
-# mydata$LogTotChl_z <- as.numeric(scale(mydata$LogTotChl))
-# mydata$LogEdChl_z <- as.numeric(scale(mydata$LogEdChl))
 
 # create dummy variables for categorical variables
 mydata <- mutate(mydata, SporeTrt = ifelse(Spores == "No", 0, 1), MixingTrt = ifelse(Mixing == "No", 0, 1), 
                  NutrientTrt = ifelse(Nutrients == "Low", 0, 1))
 
+# make experiment day a factor
 mydata$NDay_fac <- as.factor(mydata$NDay)
 
-# remove NAs
+# remove NAs, SEMs can't run with NAs in the data set
 mydata2 <- filter(mydata, !is.na(UA))
 mydata2 <- filter(mydata2, !is.na(TotChl))
 mydata2 <- filter(mydata2, !is.na(LogTotDens))
-is.na(mydata2$TotChl)
+
 
 
 # filter data to only include day 22 to 43 of experiment (second epidemic)
 mydata22_43 <- mydata2 %>%
   filter(Day >= 22 & Day <= 43)
-
-
-# filter data for +Spores and -Spores treatments
-mydata22_43_spores <- mydata22_43 %>%
-  filter(Spores == "Spores")
-mydata22_43_NOspores <- mydata22_43 %>%
-  filter(Spores == "No")
-
 
 
 # log and scale TP and TN, remove NA in nutrient data
@@ -71,14 +59,12 @@ hist(log(mydata22_43_nutrients$TP))
 hist(log(mydata22_43_nutrients$TN))
 mydata22_43_nutrients$LogTP <- as.numeric(log(mydata22_43_nutrients$TP))
 mydata22_43_nutrients$LogTN <- as.numeric(log(mydata22_43_nutrients$TN))
-mydata22_43_nutrients$LogTP_z <- as.numeric(scale(log(mydata22_43_nutrients$TP)))
-mydata22_43_nutrients$LogTN_z <- as.numeric(scale(log(mydata22_43_nutrients$TN)))
 str(mydata22_43_nutrients)
 
 
 
 
-# filter data for +Spores and -Spores treatments
+# split data by +Spores and -Spores treatments
 mydata22_43_nutrients_spores <- mydata22_43_nutrients %>%
   filter(Spores == "Spores") %>%
   mutate(OLRE = 1:79)
@@ -100,7 +86,7 @@ overdisp_fun <- function(model) {
 
 
 
-### Simple SEM with data from day 22 to 43 (second epidemic)
+### SEM with data from day 22 to 43 (second epidemic)
 # Run separate SEMs for +Spore and -Spore data because the infection densities are all zero in the -Spore treatments
 
 ###### +Spore model
@@ -125,12 +111,12 @@ exp.sem.fit_spores <- psem(
 )
 summary(exp.sem.fit_spores) # seems like there is a collinearity issue with including both TN and TP, causing effects in opposite directions but highly correlated.
 
-
+# Test correlation between TP and TN
 cor.test(mydata22_43_nutrients_spores$TN, mydata22_43_nutrients_spores$TP) # Yes, Pearson's correlation is 0.809
 
 
-# Run separate SEMs testing TP and TN independently
 
+# Run separate SEMs testing TP and TN independently
 
 ### BEST + SPORE and TP only model
 # Need to add add a correlated error between TP and total density to fix the collinearity problem!! 
@@ -301,7 +287,7 @@ mydata22_43_nutrients_NOspores$TP2 <- (mydata22_43_nutrients_NOspores$TP/10)
 head(mydata22_43_nutrients_NOspores)
 
 # similar as above, we will run separate No spore models for TP and TN because they are too highly correlated to keep within the same model
-
+# Use the same structure as we determined with the +Spores models to maintain consistency
 
 ### BEST NO SPORE TP MODEL
 # -spore model, only TP
@@ -342,7 +328,7 @@ std_scale_coefs_NOsporesTN <- stdCoefs(exp.sem.fit_NOspores_TN, data=mydata22_43
 write.csv(std_scale_coefs_NOsporesTN, here("tables/sem_std_scale_coefs_NOSporesTN_model.csv"), row.names=FALSE)
 
 
-# Testing the NO Spore TN model for goodness of fit by removing a non-sig pathway from the model so that it is not fully saturdated
+# Testing the NO Spore TN model for goodness of fit by removing a non-sig pathway from the model so that it is not fully saturated
 exp.sem.fit_NOspores_TN_test <- psem(
   glmer(TotalDensity2~EdChl2+(1|Bag)+(1|NDay_fac)+(1|OLRE), control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)),family="poisson",data=mydata22_43_nutrients_NOspores),
   glmer(EdChl2~TN2+MixingTrt+(1|Bag)+(1|NDay_fac)+(1|OLRE),family="poisson",data=mydata22_43_nutrients_NOspores),
@@ -456,7 +442,7 @@ NoSpore_correlations <- format(round(NoSpore_correlations, 3))
 diag(NoSpore_correlations) <- "--"
 rownames(NoSpore_correlations) <- c("Total Host Density", "Edible Chlorophyll", "Total Phosphorus", "Total Nitrogen")
 colnames(NoSpore_correlations) <- c("Total Host Density", "Edible Chlorophyll", "Total Phosphorus", "Total Nitrogen")
-write.csv(NoSpore_correlations, "NoSpore_SEM_factor_correlations.csv", quote = F, row.names = T)
+write.csv(NoSpore_correlations, here("tables/NoSpore_SEM_factor_correlations.csv"), quote = F, row.names = T)
 
 
 
@@ -485,4 +471,4 @@ Spore_correlations <- format(round(Spore_correlations, 3))
 diag(Spore_correlations) <- "--"
 rownames(Spore_correlations) <- c("Infection Density", "Total Host Density", "Edible Chlorophyll", "Total Phosphorus", "Total Nitrogen")
 colnames(Spore_correlations) <- c("Infection Density", "Total Host Density", "Edible Chlorophyll", "Total Phosphorus", "Total Nitrogen")
-write.csv(Spore_correlations, "Spore_SEM_factor_correlations.csv", quote = F, row.names = T)
+write.csv(Spore_correlations, here("tables/Spore_SEM_factor_correlations.csv"), quote = F, row.names = T)
