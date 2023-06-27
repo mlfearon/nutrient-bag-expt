@@ -22,7 +22,9 @@ here::i_am("scripts/Penczykowski_et_al_TimeSeriesAUC_20230624.R")
 
 # load data
 mydata <- read.csv("data/Penczykowski_et_al_BagExptData.csv", stringsAsFactors = F, header = T)
+
 str(mydata)
+
 
 # create dummy variables for categorical variables 
 mydata <- mutate(mydata,  
@@ -632,6 +634,7 @@ FigS2<-plot_grid(PS1+theme(legend.position="none"),
 print(FigS2)
 ggsave(here("figures/FigS2.tiff"), plot = FigS2, dpi = 300, width = 8, height = 8.5, units = "in", compression="lzw")
 
+
 ##################################################################################################
 ## Plots and statistics for Fig. S3 panels and Table S2
 
@@ -692,6 +695,7 @@ FigS3<-plot_grid(PS3a+theme(legend.position="none"),
 
 print(FigS3)
 ggsave(here("figures/FigS3.tiff"), plot = FigS3, dpi = 300, width = 8, height = 3, units = "in", compression="lzw")
+
 
 auc_SporesOnly<-subset(auc_data2,Spores=="Spores")
 
