@@ -3,7 +3,7 @@
 ## Penczykowski et al. submitting to Oecologia on February 15, 2023
 
 ## code written by: Rachel M. Penczykowski (modified AUC calculations written by Michelle L. Fearon)
-## last updated: February 15, 2023
+## last updated: June 24, 2023 (date when submitted revised manuscript to Oecologia)
 
 # load packages
 library(plyr)
@@ -15,13 +15,9 @@ library(lme4)
 library(car)
 library(multcomp)
 library(cowplot)
-library(here)
-
-# set the path to the script relative to the project root directory
-here::i_am("scripts/Penczykowski_et_al_TimeSeriesAUC_20230215.R")
 
 # load data
-mydata <- read.csv(here("data/Penczykowski_et_al_BagExptData.csv"), stringsAsFactors = F, header = T)
+mydata <- read.csv("Penczykowski_et_al_BagExptData.csv", stringsAsFactors = F, header = T)
 str(mydata)
 
 # create dummy variables for categorical variables 
@@ -33,8 +29,14 @@ mydata <- mutate(mydata,
 mydata$Bag<-as.factor(mydata$Bag)
 levels(mydata$Bag) # checking that the excluded bags were already removed (for reasons explained in methods section of manuscript)
 
+# calculate infection prevalence separately for juvenile and adult hosts
+mydata$PrevJuv<-mydata$MJ/(mydata$MJ+mydata$UJ)
+mydata$PrevAdult<-mydata$MA/(mydata$MA+mydata$UA)
+
 # remove NAs from focal variables
 mydata2 <- filter(mydata, !is.na(PrevTotal))
+mydata2 <- filter(mydata2, !is.na(PrevJuv))
+mydata2 <- filter(mydata2, !is.na(PrevAdult))
 mydata2 <- filter(mydata2, !is.na(InfDensity))
 mydata2 <- filter(mydata2, !is.na(LogInfDens))
 mydata2 <- filter(mydata2, !is.na(TotalDensity))
@@ -51,7 +53,7 @@ mydata2 <- filter(mydata2, !is.na(LogTN))
 ##################################################################################################
 
 loop_data <- mydata2[,c("Nutrients","Mixing","Spores","NutrientTrt","MixingTrt","SporeTrt","Raft","Bag","Day",
-                        "PrevTotal","LogInfDens","LogTotDens","LogEdChl","LogTP","LogTN")]
+                        "PrevTotal","PrevJuv","LogInfDens","LogTotDens","LogEdChl","LogTP","LogTN")]
 
 # arrange data 
 loop_data <- loop_data %>%
@@ -104,6 +106,18 @@ for (i in NUTRIENTS) {
               TOTS <- as.data.frame(TOTS)
               AREA_Day22Thru43_PrevTotal <- AUC(TOTS[ , "day"], TOTS[ , "total"], from = min(22, na.rm = TRUE), to = max(43, na.rm = TRUE), method = "trapezoid")
              
+              TOTS <- NULL #make an empty matrix to include sequential values. This will be used to calculate integrated areas.
+              for (m in 1:length(thisbag$PrevJuv)) {
+                total <- thisbag[m, "PrevJuv"] 
+                day <- thisbag[m, "Day"] 
+                tots <- c(m, day, total) #new row in dataframe with m, day, and total
+                TOTS <- rbind(TOTS, tots) #bind all rows together (different one for each bag)
+                colnames(TOTS) <- c("m", "day", "total")
+              }
+              rownames(TOTS) <- NULL
+              TOTS <- as.data.frame(TOTS)
+              AREA_Day22Thru43_PrevJuv <- AUC(TOTS[ , "day"], TOTS[ , "total"], from = min(22, na.rm = TRUE), to = max(43, na.rm = TRUE), method = "trapezoid")
+              
               TOTS <- NULL #make an empty matrix to include sequential values. This will be used to calculate integrated areas.
               for (m in 1:length(thisbag$LogInfDens)) {
                 total <- thisbag[m, "LogInfDens"] 
@@ -164,7 +178,7 @@ for (i in NUTRIENTS) {
               TOTS <- as.data.frame(TOTS)
               AREA_Day22Thru43_LogTN <- AUC(TOTS[ , "day"], TOTS[ , "total"], from = min(22, na.rm = TRUE), to = max(43, na.rm = TRUE), method = "trapezoid")
               
-              output <- c(i, j, h, r, p, AREA_Day22Thru43_PrevTotal, AREA_Day22Thru43_LogInfDens, AREA_Day22Thru43_LogTotDens,
+              output <- c(i, j, h, r, p, AREA_Day22Thru43_PrevTotal, AREA_Day22Thru43_PrevJuv, AREA_Day22Thru43_LogInfDens, AREA_Day22Thru43_LogTotDens,
                           AREA_Day22Thru43_LogEdChl, AREA_Day22Thru43_LogTP, AREA_Day22Thru43_LogTN)
               OUT <- rbind(OUT, output)
         }
@@ -174,7 +188,7 @@ for (i in NUTRIENTS) {
 }
 
 colnames(OUT) <- c("NutrientTrt", "MixingTrt", "SporeTrt", "Raft","Bag", 
-                   "AUC.Days22Thru43.PrevTotal","AUC.Days22Thru43.LogInfDens","AUC.Days22Thru43.LogTotDens",
+                   "AUC.Days22Thru43.PrevTotal","AUC.Days22Thru43.PrevJuv","AUC.Days22Thru43.LogInfDens","AUC.Days22Thru43.LogTotDens",
                    "AUC.Days22Thru43.LogEdChl","AUC.Days22Thru43.LogTP","AUC.Days22Thru43.LogTN")
 
 auc_data <- as.data.frame(OUT)
@@ -183,7 +197,7 @@ row.names(auc_data) <- c()
 sapply(auc_data, class)
 c <- c("NutrientTrt", "MixingTrt", "SporeTrt", "Raft","Bag")
 auc_data[c] <- lapply(auc_data[c], as.factor)
-d <- c("AUC.Days22Thru43.PrevTotal","AUC.Days22Thru43.LogInfDens","AUC.Days22Thru43.LogTotDens",
+d <- c("AUC.Days22Thru43.PrevTotal","AUC.Days22Thru43.PrevJuv","AUC.Days22Thru43.LogInfDens","AUC.Days22Thru43.LogTotDens",
        "AUC.Days22Thru43.LogEdChl","AUC.Days22Thru43.LogTP","AUC.Days22Thru43.LogTN")
 auc_data[d] <- lapply(auc_data[d], as.numeric)
 str(auc_data)
@@ -218,7 +232,7 @@ NutColors<-c("darkgreen","#56B4E9") # green for high nutrients (color of algae b
 ## Plots and statistics for Fig. 1 panels and Table 1
 
 ##################################################################################################
-## Infection prevalence
+## Infection prevalence (adults + juveniles combined)
 ##################################################################################################
 InfPrevSummary<-ddply(mydata2, c("Nutrients", "Mixing","Spores","Day"), summarise,
                          N    = length(PrevTotal),
@@ -235,6 +249,7 @@ InfPrev_ClosedMixed<-subset(InfPrev_Closed,Mixing=="Mix")
 InfPrev_ClosedNoMixed<-subset(InfPrev_Closed,Mixing=="No")
 
 p1<-(ggplot()+
+  annotate("rect", xmin = 22-0.8, xmax = 43+0.8, ymin = 0, ymax = 0.43,fill="gray90")+
   geom_point(data=InfPrev_OpenMixed,aes(x=Day+0.4,y=mean,color=Nutrients,shape=Mixing),size=2)+
   geom_point(data=InfPrev_ClosedMixed,aes(x=Day+0.4,y=mean,color=Nutrients,fill=Nutrients,shape=Mixing),size=2)+
   geom_errorbar(data=InfPrev_OpenMixed,aes(x=Day+0.4, ymin=mean-se, ymax=mean+se,color=Nutrients,linetype=Mixing), width=1) + 
@@ -249,8 +264,7 @@ p1<-(ggplot()+
   facet_wrap(~Spores,labeller=labeller(Spores=SporesNames))+
   ylab("Infection prevalence")+
   xlab("Day of experiment")+
-  fav_theme+
-  annotate("rect", xmin = 22-0.8, xmax = 43+0.8, ymin = 0, ymax = 0.43,fill="gray90",alpha=0.3)
+  fav_theme
 )
 
 p2<-(ggplot(auc_data2)+
@@ -290,6 +304,7 @@ LogInfDens_ClosedMixed<-subset(LogInfDens_Closed,Mixing=="Mix")
 LogInfDens_ClosedNoMixed<-subset(LogInfDens_Closed,Mixing=="No")
 
 p3<-(ggplot()+
+  annotate("rect", xmin = 22-0.8, xmax = 43+0.8, ymin = 4.25, ymax = 11.5,fill="gray90")+
   geom_point(data=LogInfDens_OpenMixed,aes(x=Day+0.4,y=mean,color=Nutrients,shape=Mixing),size=2)+
   geom_point(data=LogInfDens_ClosedMixed,aes(x=Day+0.4,y=mean,color=Nutrients,fill=Nutrients,shape=Mixing),size=2)+
   geom_errorbar(data=LogInfDens_OpenMixed,aes(x=Day+0.4, ymin=mean-se, ymax=mean+se,color=Nutrients,linetype=Mixing), width=1) + 
@@ -304,8 +319,7 @@ p3<-(ggplot()+
   facet_wrap(~Spores,labeller=labeller(Spores=SporesNames))+
   ylab("Log(infected host density)")+
   xlab("Day of experiment")+
-  fav_theme+
-  annotate("rect", xmin = 22-0.8, xmax = 43+0.8, ymin = 4.25, ymax = 11.5,fill="gray90",alpha=0.3)
+  fav_theme
 )
 
 p4<-(ggplot(auc_data2)+
@@ -346,6 +360,7 @@ LogTotDens_ClosedMixed<-subset(LogTotDens_Closed,Mixing=="Mix")
 LogTotDens_ClosedNoMixed<-subset(LogTotDens_Closed,Mixing=="No")
 
 p5<-(ggplot()+
+  annotate("rect", xmin = 22-0.8, xmax = 43+0.8, ymin = 6.8, ymax = 13,fill="gray90")+
   geom_point(data=LogTotDens_OpenMixed,aes(x=Day+0.4,y=mean,color=Nutrients,shape=Mixing),size=2)+
   geom_point(data=LogTotDens_ClosedMixed,aes(x=Day+0.4,y=mean,color=Nutrients,fill=Nutrients,shape=Mixing),size=2)+
   geom_errorbar(data=LogTotDens_OpenMixed,aes(x=Day+0.4, ymin=mean-se, ymax=mean+se,color=Nutrients,linetype=Mixing), width=1) + 
@@ -360,8 +375,7 @@ p5<-(ggplot()+
   facet_wrap(~Spores,labeller=labeller(Spores=SporesNames))+
   ylab("Log(total host density)")+
   xlab("Day of experiment")+
-  fav_theme+
-  annotate("rect", xmin = 22-0.8, xmax = 43+0.8, ymin = 6.8, ymax = 13,fill="gray90",alpha=0.3)
+  fav_theme
 )
 
 p6<-(ggplot(auc_data2)+
@@ -397,7 +411,6 @@ Fig1<-plot_grid(p1+theme(legend.position="none"),
           ncol=2,rel_widths = c(1,0.5,1,0.5,1,0.5))
 
 print(Fig1)
-ggsave(here("figures/Fig1.tiff"), plot = Fig1, dpi = 300, width = 8, height = 8.5, units = "in", compression="lzw")
 
 library(ggpubr)
 # Extract the legend. Returns a gtable
@@ -409,7 +422,7 @@ print(as_ggplot(leg1))
 print(as_ggplot(leg2))
 
 ##################################################################################################
-## Plots and statistics for Fig. S1 panels and Table S1
+## Plots and statistics for Fig. S2 panels and Table S1
 
 ##################################################################################################
 ## Log(Edible chlorophyll a)
@@ -429,6 +442,7 @@ LogEdChl_ClosedMixed<-subset(LogEdChl_Closed,Mixing=="Mix")
 LogEdChl_ClosedNoMixed<-subset(LogEdChl_Closed,Mixing=="No")
 
 PS1<-(ggplot()+
+  annotate("rect", xmin = 22-0.8, xmax = 43+0.8, ymin = 0, ymax = 4.2,fill="gray90")+
   geom_point(data=LogEdChl_OpenMixed,aes(x=Day+0.4,y=mean,color=Nutrients,shape=Mixing),size=2)+
   geom_point(data=LogEdChl_ClosedMixed,aes(x=Day+0.4,y=mean,color=Nutrients,fill=Nutrients,shape=Mixing),size=2)+
   geom_errorbar(data=LogEdChl_OpenMixed,aes(x=Day+0.4, ymin=mean-se, ymax=mean+se,color=Nutrients,linetype=Mixing), width=1) + 
@@ -443,8 +457,7 @@ PS1<-(ggplot()+
   facet_wrap(~Spores,labeller=labeller(Spores=SporesNames))+
   ylab(expression("Log(edible chlorophyll "~italic(a)~")"))+
   xlab("Day of experiment")+
-  fav_theme+
-  annotate("rect", xmin = 22-0.8, xmax = 43+0.8, ymin = 0, ymax = 4.2,fill="gray90",alpha=0.3)
+  fav_theme
 )
 
 PS2<-(ggplot(auc_data2)+
@@ -484,6 +497,7 @@ LogTP_ClosedMixed<-subset(LogTP_Closed,Mixing=="Mix")
 LogTP_ClosedNoMixed<-subset(LogTP_Closed,Mixing=="No")
 
 PS3<-(ggplot()+
+  annotate("rect", xmin = 22-0.8, xmax = 43+0.8, ymin = 1.7, ymax = 4.95,fill="gray90")+
   geom_point(data=LogTP_OpenMixed,aes(x=Day+0.4,y=mean,color=Nutrients,shape=Mixing),size=2)+
   geom_point(data=LogTP_ClosedMixed,aes(x=Day+0.4,y=mean,color=Nutrients,fill=Nutrients,shape=Mixing),size=2)+
   geom_errorbar(data=LogTP_OpenMixed,aes(x=Day+0.4, ymin=mean-se, ymax=mean+se,color=Nutrients,linetype=Mixing), width=1) + 
@@ -498,8 +512,7 @@ PS3<-(ggplot()+
   facet_wrap(~Spores,labeller=labeller(Spores=SporesNames))+
   ylab("Log(total phosphorus)")+
   xlab("Day of experiment")+
-  fav_theme+
-  annotate("rect", xmin = 22-0.8, xmax = 43+0.8, ymin = 1.7, ymax = 4.95,fill="gray90",alpha=0.3)
+  fav_theme
 )
 
 PS4<-(ggplot(auc_data2)+
@@ -546,6 +559,7 @@ LogTN_ClosedMixed<-subset(LogTN_Closed,Mixing=="Mix")
 LogTN_ClosedNoMixed<-subset(LogTN_Closed,Mixing=="No")
 
 PS5<-(ggplot()+
+  annotate("rect", xmin = 22-0.8, xmax = 43+0.8, ymin = 5.85, ymax = 8,fill="gray90")+
   geom_point(data=LogTN_OpenMixed,aes(x=Day+0.4,y=mean,color=Nutrients,shape=Mixing),size=2)+
   geom_point(data=LogTN_ClosedMixed,aes(x=Day+0.4,y=mean,color=Nutrients,fill=Nutrients,shape=Mixing),size=2)+
   geom_errorbar(data=LogTN_OpenMixed,aes(x=Day+0.4, ymin=mean-se, ymax=mean+se,color=Nutrients,linetype=Mixing), width=1) + 
@@ -560,8 +574,7 @@ PS5<-(ggplot()+
   facet_wrap(~Spores,labeller=labeller(Spores=SporesNames))+
   ylab("Log(total nitrogen)")+
   xlab("Day of experiment")+
-  fav_theme+
-  annotate("rect", xmin = 22-0.8, xmax = 43+0.8, ymin = 5.85, ymax = 8,fill="gray90",alpha=0.3)
+  fav_theme
 )
 
 PS6<-(ggplot(auc_data2)+
@@ -600,9 +613,9 @@ Anova(mLogTN.glm2)
 summary(mLogTN.glm2)
 
 ##################################################################################################
-## Complete Fig. S1 
+## Complete Fig. S2 
 ##################################################################################################
-FigS1<-plot_grid(PS1+theme(legend.position="none"),
+FigS2<-plot_grid(PS1+theme(legend.position="none"),
                 PS2+theme(legend.position="none"),
                 PS3+theme(legend.position="none"),
                 PS4+theme(legend.position="none"),
@@ -611,8 +624,107 @@ FigS1<-plot_grid(PS1+theme(legend.position="none"),
                 labels = c('a','b','c','d','e','f'),
                 ncol=2,rel_widths = c(1,0.5,1,0.5,1,0.5))
 
-print(FigS1)
-ggsave(here("figures/FigS1.tiff"), plot = FigS1, dpi = 300, width = 8, height = 8.5, units = "in", compression="lzw")
+print(FigS2)
+
+##################################################################################################
+## Plots and statistics for Fig. S3 panels and Table S2
+
+##################################################################################################
+## Infection prevalence (juveniles only)
+##################################################################################################
+InfPrevJuvSummary<-ddply(mydata2, c("Nutrients", "Mixing","Spores","Day"), summarise,
+                      N    = length(PrevJuv),
+                      mean = mean(PrevJuv),
+                      sd   = sd(PrevJuv),
+                      se   = sd / sqrt(N)
+)
+
+InfPrevJuv_Open<-subset(InfPrevJuvSummary, Day<22|Day>43)
+InfPrevJuv_Closed<-subset(InfPrevJuvSummary,Day>=22&Day<=43)
+InfPrevJuv_OpenMixed<-subset(InfPrevJuv_Open,Mixing=="Mix")
+InfPrevJuv_OpenNoMixed<-subset(InfPrevJuv_Open,Mixing=="No")
+InfPrevJuv_ClosedMixed<-subset(InfPrevJuv_Closed,Mixing=="Mix")
+InfPrevJuv_ClosedNoMixed<-subset(InfPrevJuv_Closed,Mixing=="No")
+
+PS3a<-(ggplot()+
+       annotate("rect", xmin = 22-0.8, xmax = 43+0.8, ymin = 0, ymax = 0.43,fill="gray90")+
+       geom_point(data=InfPrevJuv_OpenMixed,aes(x=Day+0.4,y=mean,color=Nutrients,shape=Mixing),size=2)+
+       geom_point(data=InfPrevJuv_ClosedMixed,aes(x=Day+0.4,y=mean,color=Nutrients,fill=Nutrients,shape=Mixing),size=2)+
+       geom_errorbar(data=InfPrevJuv_OpenMixed,aes(x=Day+0.4, ymin=mean-se, ymax=mean+se,color=Nutrients,linetype=Mixing), width=1) + 
+       geom_errorbar(data=InfPrevJuv_ClosedMixed,aes(x=Day+0.4, ymin=mean-se, ymax=mean+se,color=Nutrients,linetype=Mixing), width=1) + 
+       geom_point(data=InfPrevJuv_OpenNoMixed,aes(x=Day-0.4,y=mean,color=Nutrients,shape=Mixing),size=2)+
+       geom_point(data=InfPrevJuv_ClosedNoMixed,aes(x=Day-0.4,y=mean,color=Nutrients,fill=Nutrients,shape=Mixing),size=2)+
+       geom_errorbar(data=InfPrevJuv_OpenNoMixed,aes(x=Day-0.4, ymin=mean-se, ymax=mean+se,color=Nutrients,linetype=Mixing), width=1) + 
+       geom_errorbar(data=InfPrevJuv_ClosedNoMixed,aes(x=Day-0.4, ymin=mean-se, ymax=mean+se,color=Nutrients,linetype=Mixing), width=1) + 
+       scale_shape_manual(values=c(21,24))+
+       scale_color_manual(values=NutColors)+
+       scale_fill_manual(values=NutColors)+
+       facet_wrap(~Spores,labeller=labeller(Spores=SporesNames))+
+       ylab("Juvenile infection prevalence")+
+       xlab("Day of experiment")+
+       fav_theme
+)
+
+PS3b<-(ggplot(auc_data2)+
+       geom_boxplot(aes(x=Mixing,y=AUC.Days22Thru43.PrevJuv,color=Nutrients))+
+       geom_point(aes(x=Mixing,y=AUC.Days22Thru43.PrevJuv,color=Nutrients,fill=Nutrients,shape=Mixing),position=position_dodge(width=0.75),size=2)+
+       scale_shape_manual(values=c(21,24))+
+       scale_color_manual(values=NutColors)+
+       scale_fill_manual(values=NutColors)+
+       facet_wrap(~Spores,labeller=labeller(Spores=SporesNames))+
+       ylab("AUC, juv. infection prevalence")+
+       fav_theme
+)
+
+##################################################################################################
+## Complete Fig. S3 
+##################################################################################################
+FigS3<-plot_grid(PS3a+theme(legend.position="none"),
+                 PS3b+theme(legend.position="none"),
+                 labels = c('a','b'),
+                 ncol=2,rel_widths = c(1,0.5))
+
+print(FigS3)
+
+auc_SporesOnly<-subset(auc_data2,Spores=="Spores")
+
+mPrevJuv.glmm1<-lmer(AUC.Days22Thru43.PrevJuv~Nutrients*Mixing+(1|Raft),data=auc_SporesOnly)
+Anova(mPrevJuv.glmm1)
+mPrevJuv.glmm2<-lmer(AUC.Days22Thru43.PrevJuv~Nutrients+Mixing+(1|Raft),data=auc_SporesOnly)
+summary(mPrevJuv.glmm2)
+Anova(mPrevJuv.glmm2)
+
+##################################################################################################
+## Look at relationships between juvenile, adult, and total infection prevalence
+
+plot(mydata2$PrevJuv,mydata2$PrevTotal)
+plot(mydata2$PrevJuv,mydata2$PrevAdult)
+
+PrevOnly<-mydata2[,c("PrevJuv","PrevAdult","Nutrients")]
+NonZeroAdultPrev<-subset(PrevOnly,PrevAdult>0)
+summary(lm(PrevAdult~PrevJuv,data=NonZeroAdultPrev))
+ggplot(NonZeroAdultPrev)+
+  geom_point(aes(x=PrevJuv,y=PrevAdult,color=Nutrients))+
+  scale_color_manual(values=NutColors)+
+  ylim(0,1)+
+  xlim(0,1)+
+  stat_smooth(aes(x=PrevJuv,y=PrevAdult),method="lm")
+
+NonZeroJuvPrev<-subset(PrevOnly,PrevJuv>0)
+summary(lm(PrevAdult~PrevJuv,data=NonZeroJuvPrev))
+ggplot(NonZeroJuvPrev)+
+  geom_point(aes(x=PrevJuv,y=PrevAdult,color=Nutrients))+
+  scale_color_manual(values=NutColors)+
+  ylim(0,1)+
+  xlim(0,1)+
+  stat_smooth(aes(x=PrevJuv,y=PrevAdult),method="lm")
+
+##################################################################################################
+## Calculate host densities on Day 1 of experiment (8 Sept 2011)
+
+Day1Data<-subset(mydata2,Day==1)
+round(mean(Day1Data$TotalDensity),0)
+round(sd(Day1Data$TotalDensity),0)
 
 ##################################################################################################
 ## END OF SCRIPT 
